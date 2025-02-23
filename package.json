@@ -43,7 +43,7 @@
     "express-validator": "^7.0.1",
     "google-auth-library": "^9.15.1",
     "handlebars": "^4.7.8",
-    "helmet": "^7.0.0",
+    "helmet": "^7.1.0",
     "hpp": "^0.2.3",
     "ioredis": "^5.3.2",
     "joi": "^17.13.3",
@@ -68,7 +68,7 @@
     "umzug": "^3.7.0",
     "uuid": "^9.0.0",
     "validator": "^13.11.0",
-    "winston": "^3.8.2",
+    "winston": "^3.11.0",
     "winston-daily-rotate-file": "^4.7.1",
     "ws": "^8.13.0",
     "xss-clean": "^0.1.1"

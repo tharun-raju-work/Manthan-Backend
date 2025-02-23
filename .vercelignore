@@ -1,0 +1,9 @@
+.git
+.env
+.env.*
+node_modules
+test
+docs
+*.test.js
+*.spec.js
+README.md 
