@@ -18,6 +18,10 @@
     "REDIS_ENABLED": "false",
     "ENABLE_CLUSTERING": "false",
     "POSTGRES_SSL": "true",
-    "PORT": "3000"
+    "PORT": "3000",
+    "POSTGRES_HOST": "your_db_host",
+    "POSTGRES_USER": "your_db_user",
+    "POSTGRES_PASSWORD": "@postgres_password",
+    "POSTGRES_DB": "your_db_name"
   }
 } 

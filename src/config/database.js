@@ -27,87 +27,64 @@ const config = {
   }
 };
 
-// Create Sequelize instance
-const sequelize = new Sequelize(
-  config.database,
-  config.username,
-  config.password,
-  {
-    host: config.host,
-    port: config.port,
-    dialect: config.dialect,
-    logging: config.logging,
-    pool: config.pool,
-    dialectOptions: config.dialectOptions
-  }
-);
+let sequelize;
+try {
+  sequelize = new Sequelize(config);
+} catch (error) {
+  logger.error('Database', 'Failed to initialize Sequelize', error);
+  sequelize = null;
+}
 
-// MongoDB Configuration
 const mongoConnect = async () => {
   try {
+    if (!process.env.MONGODB_URL) {
+      logger.warn('Database', 'MongoDB URL not provided, skipping connection');
+      return false;
+    }
     await mongoose.connect(process.env.MONGODB_URL, {
-      maxPoolSize: parseInt(process.env.MONGODB_MAX_POOL_SIZE, 10) || 100,
-      minPoolSize: 5,
-      socketTimeoutMS: 45000,
-      serverSelectionTimeoutMS: 5000,
-      family: 4,
-      retryWrites: true,
-      writeConcern: {
-        w: 'majority'
-      }
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      maxPoolSize: parseInt(process.env.MONGODB_MAX_POOL_SIZE, 10) || 100
     });
-    console.log('MongoDB connected successfully');
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    process.exit(1);
-  }
-};
-
-// Handle MongoDB connection events
-mongoose.connection.on('error', (err) => {
-  console.error('MongoDB connection error:', err);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected. Attempting to reconnect...');
-});
-
-// Test database connection
-const testConnection = async () => {
-  try {
-    await sequelize.authenticate();
-    logger.info('Database', 'PostgreSQL connection successful');
     return true;
   } catch (error) {
-    logger.error('Database', 'PostgreSQL connection error', {
-      error: error.message,
-      stack: error.stack
-    });
+    logger.error('Database', 'MongoDB connection failed', error);
     return false;
   }
 };
 
-// Simplified database initialization
-const initializeDatabase = async () => {
+const testConnection = async () => {
   try {
-    // Test connection
-    const connected = await testConnection();
-    if (!connected) {
-      throw new Error('Failed to connect to PostgreSQL');
+    if (sequelize) {
+      await sequelize.authenticate();
+      logger.info('Database', 'PostgreSQL connection successful');
     }
 
+    if (process.env.MONGODB_URL) {
+      await mongoConnect();
+      logger.info('Database', 'MongoDB connection successful');
+    }
+
+    return true;
+  } catch (error) {
+    logger.error('Database', 'Database connection test failed', error);
+    return false;
+  }
+};
+
+const initializeDatabase = async () => {
+  try {
+    await testConnection();
+
     // Sync models in development
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' && sequelize) {
       await sequelize.sync({ alter: true });
       logger.info('Database', 'Models synchronized successfully');
     }
 
     return true;
   } catch (error) {
-    logger.error('Database', 'Database initialization failed', {
-      error: error.message,
-      stack: error.stack
-    });
+    logger.error('Database', 'Database initialization failed', error);
     return false;
   }
 };
