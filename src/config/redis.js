@@ -20,22 +20,19 @@ class RedisClient {
       this.client = new Redis({
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT) || 6379,
-        password: process.env.REDIS_PASSWORD,
+        password: process.env.REDIS_PASSWORD || null,
         db: parseInt(process.env.REDIS_DB) || 0,
-        keyPrefix: process.env.REDIS_PREFIX || 'manthan:',
-        lazyConnect: false,
-        showFriendlyErrorStack: true,
-        enableReadyCheck: true,
-        autoResubscribe: true,
+        tls: process.env.REDIS_TLS === 'true' ? {} : null,
         retryStrategy: (times) => {
           const delay = Math.min(times * 100, 2000);
           logger.info('Redis', `Retrying connection in ${delay}ms`);
           return delay;
-        }
+        },
+        maxRetriesPerRequest: 1
       });
 
       this.client.on('connect', () => {
-        logger.info('Redis', 'Connected to Redis server');
+        logger.info('Redis', 'Connected to Redis');
       });
 
       this.client.on('ready', () => {
@@ -44,7 +41,6 @@ class RedisClient {
       });
 
       this.client.on('error', (error) => {
-        this.isReady = false;
         logger.error('Redis', 'Redis client error', error);
       });
 
@@ -55,24 +51,21 @@ class RedisClient {
 
       // Test connection
       await this.client.ping();
-      this.isReady = true;
-      logger.info('Redis', 'Redis connection test successful');
-
-      return this;
+      
     } catch (error) {
       logger.error('Redis', 'Failed to initialize Redis client', error);
-      this.isReady = false;
-      return this;
+      this.enabled = false;
     }
+
+    return this;
   }
 
   async ping() {
-    if (!this.client) return false;
     try {
-      const result = await this.client.ping();
-      return result === 'PONG';
+      if (!this.enabled || !this.client) return false;
+      await this.client.ping();
+      return true;
     } catch (error) {
-      logger.error('Redis', 'Ping failed', error);
       return false;
     }
   }
@@ -93,9 +86,8 @@ const redisClient = new RedisClient();
 (async () => {
   try {
     await redisClient.init();
-    console.log('Redis status:', await redisClient.getStatus());
   } catch (error) {
-    console.error('Redis initialization error:', error);
+    logger.error('Redis', 'Redis initialization error:', error);
   }
 })();
 

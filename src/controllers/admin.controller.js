@@ -4,37 +4,11 @@ const { logError } = require('../utils/logger.helper');
 class AdminController {
   async getRedisStatus(req, res) {
     try {
-      if (!redisClient.enabled) {
-        return res.json({
-          status: 'success',
-          data: {
-            enabled: false,
-            message: 'Redis is disabled'
-          }
-        });
-      }
-
-      const isConnected = await redisClient.ping();
-      let info = null;
-      let memory = null;
-
-      if (isConnected) {
-        try {
-          info = await redisClient.client.info();
-          memory = await redisClient.client.memory('STATS');
-        } catch (error) {
-          logError('AdminController.getRedisStatus', 'Error getting Redis info', error);
-        }
-      }
-
+      const status = await redisClient.getStatus();
+      
       res.json({
         status: 'success',
-        data: {
-          enabled: redisClient.enabled,
-          connected: isConnected,
-          info,
-          memory
-        }
+        data: status
       });
     } catch (error) {
       logError('AdminController.getRedisStatus', error);
