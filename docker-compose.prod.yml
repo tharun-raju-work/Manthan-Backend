@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      target: production
+    environment:
+      - NODE_ENV=production
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  prometheus:
+    volumes:
+      - prometheus_data:/prometheus
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+  grafana:
+    volumes:
+      - grafana_data:/var/lib/grafana
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager 

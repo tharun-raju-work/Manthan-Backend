@@ -1,24 +1,59 @@
-const { sequelize, mongoConnect, testPostgresConnection } = require('./database');
-const models = require('../models/sql');
+const { sequelize, testConnection } = require('./database');
+const redisClient = require('./redis');
+const logger = require('./logger');
 
-const initializeDatabase = async () => {
+const initializeServices = async () => {
   try {
-    // Test PostgreSQL connection
-    await testPostgresConnection();
+    logger.info('Initialization', 'Starting services initialization');
 
-    // Sync all models with database
-    if (process.env.NODE_ENV !== 'production') {
-      await sequelize.sync({ alter: true });
+    // Test database connection
+    logger.debug('Database', 'Testing connection');
+    const dbConnected = await testConnection();
+    if (!dbConnected) {
+      logger.error('Database', 'Failed to connect to database');
+      return false;
+    }
+    logger.info('Database', 'Connection successful');
+
+    // Sync models in development
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        logger.debug('Database', 'Starting model synchronization');
+        await sequelize.sync({ alter: true });
+        logger.info('Database', 'Models synchronized successfully');
+      } catch (error) {
+        logger.error('Database', 'Model synchronization failed', error);
+        // Continue even if sync fails
+      }
     }
 
-    // Connect to MongoDB
-    await mongoConnect();
+    // Initialize Redis if enabled
+    if (process.env.REDIS_ENABLED === 'true') {
+      try {
+        logger.debug('Redis', 'Starting Redis initialization');
+        await redisClient.init();
+        const redisStatus = await redisClient.getStatus();
+        logger.info('Redis', 'Redis initialization complete', redisStatus);
+      } catch (error) {
+        logger.error('Redis', 'Redis initialization failed', error);
+        // Continue even if Redis fails
+      }
+    }
 
-    console.log('All database connections established successfully');
+    // Log final status
+    const status = {
+      database: sequelize.connectionManager.hasOwnProperty('getConnection'),
+      redis: process.env.REDIS_ENABLED === 'true' ? redisClient.isReady : 'disabled'
+    };
+    logger.info('Initialization', 'Services initialization complete', { status });
+
+    return true;
   } catch (error) {
-    console.error('Database initialization error:', error);
-    process.exit(1);
+    logger.error('Initialization', 'Service initialization failed', error);
+    return false;
   }
 };
 
-module.exports = initializeDatabase;
+module.exports = {
+  initializeServices
+};

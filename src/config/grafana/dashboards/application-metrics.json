@@ -1,0 +1,123 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "User Activity",
+      "type": "row",
+      "panels": [
+        {
+          "title": "Active Users",
+          "type": "stat",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "users_active{timeframe='daily'}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  { "value": 0, "color": "red" },
+                  { "value": 100, "color": "yellow" },
+                  { "value": 1000, "color": "green" }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "title": "Authentication Success Rate",
+          "type": "gauge",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "sum(rate(auth_attempts_total{status='success'}[5m])) / sum(rate(auth_attempts_total[5m])) * 100"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Post Metrics",
+      "type": "row",
+      "panels": [
+        {
+          "title": "Posts by Category",
+          "type": "piechart",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "sum(posts_total) by (category)"
+            }
+          ]
+        },
+        {
+          "title": "Post Engagement",
+          "type": "timeseries",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "rate(post_engagement_score_sum[1h])",
+              "legendFormat": "{{type}}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "API Performance",
+      "type": "row",
+      "panels": [
+        {
+          "title": "API Latency",
+          "type": "heatmap",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "rate(api_request_duration_seconds_bucket[5m])",
+              "format": "heatmap"
+            }
+          ]
+        },
+        {
+          "title": "Rate Limits",
+          "type": "timeseries",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "rate(api_rate_limit_hits_total[5m])",
+              "legendFormat": "{{endpoint}}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["application"],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Application Metrics",
+  "version": 1,
+  "weekStart": ""
+} 

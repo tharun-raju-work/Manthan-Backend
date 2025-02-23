@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    .header {
+      background-color: #f8f9fa;
+      padding: 20px;
+      text-align: center;
+      border-radius: 5px;
+    }
+    .content {
+      padding: 20px 0;
+      line-height: 1.6;
+    }
+    .button {
+      display: inline-block;
+      padding: 12px 24px;
+      background-color: #007bff;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Welcome to Our Platform!</h2>
+    </div>
+    
+    <div class="content">
+      <p>Hello {{username}},</p>
+      
+      <p>Thank you for joining our platform. We're excited to have you on board!</p>
+      
+      <p>You can login to your account here:</p>
+      
+      <a href="{{loginUrl}}" class="button">Login to Your Account</a>
+      
+      <p>If you have any questions, feel free to contact our support team.</p>
+      
+      <p>Best regards,<br>The Team</p>
+    </div>
+  </div>
+</body>
+</html> 

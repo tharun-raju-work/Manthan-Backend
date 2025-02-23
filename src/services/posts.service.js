@@ -3,6 +3,7 @@ const {
 } = require('../models/sql');
 const { ActivityLog } = require('../models/mongo/ActivityLog');
 const { ApiError } = require('../utils/errors');
+const metricsService = require('./metrics.service');
 
 class PostService {
   async getPosts(filters, pagination) {
@@ -94,9 +95,12 @@ class PostService {
         details: { postId: post.id },
       });
 
+      metricsService.trackPost(post.status, post.category_id);
+
       return this.getPostById(post.id);
     } catch (error) {
       await transaction.rollback();
+      metricsService.trackError('post_creation', error.code || 'unknown');
       throw error;
     }
   }
@@ -201,6 +205,23 @@ class PostService {
       return this.getPostById(postId);
     } catch (error) {
       await transaction.rollback();
+      throw error;
+    }
+  }
+
+  async getPostEngagement(postId) {
+    try {
+      const [comments, votes] = await Promise.all([
+        Comment.count({ where: { post_id: postId } }),
+        PostVote.count({ where: { post_id: postId } })
+      ]);
+
+      metricsService.observePostEngagement('comments', comments);
+      metricsService.observePostEngagement('votes', votes);
+
+      return { comments, votes };
+    } catch (error) {
+      metricsService.trackError('post_engagement', error.code || 'unknown');
       throw error;
     }
   }

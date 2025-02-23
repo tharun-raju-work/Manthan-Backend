@@ -1,15 +1,12 @@
 const { ApiError } = require('../utils/errors');
+const { logger } = require('../config/logger');
 
 const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
 
   // Log error
-  console.error('Error:', {
-    message: error.message,
-    stack: error.stack,
-    timestamp: new Date().toISOString(),
-  });
+  logger.error('Error:', err);
 
   // Sequelize unique constraint error
   if (err.name === 'SequelizeUniqueConstraintError') {
@@ -43,7 +40,7 @@ const errorHandler = (err, req, res, next) => {
   // Send error response
   res.status(error.statusCode || 500).json({
     status: error.status || 'error',
-    message: error.message || 'Internal server error',
+    message: error.message || (process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'),
     ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
   });
 };
