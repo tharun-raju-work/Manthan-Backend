@@ -1,15 +1,13 @@
-const path = require('path');
-require('dotenv').config();
-
 const winston = require('winston');
 require('winston-daily-rotate-file');
+const path = require('path');
+const fs = require('fs');
 
 // Custom format for better error handling
 const customFormat = winston.format.combine(
   winston.format.timestamp(),
   winston.format.errors({ stack: true }),
   winston.format.printf(({ level, message, context, timestamp, error, stack, ...meta }) => {
-    // Base log entry
     let logEntry = {
       timestamp,
       level,
@@ -17,7 +15,6 @@ const customFormat = winston.format.combine(
       message
     };
 
-    // Add error information if present
     if (error || stack) {
       logEntry.error = {
         message: error?.message || message,
@@ -25,7 +22,6 @@ const customFormat = winston.format.combine(
       };
     }
 
-    // Add any additional metadata
     if (Object.keys(meta).length > 0) {
       logEntry.meta = meta;
     }
@@ -34,59 +30,58 @@ const customFormat = winston.format.combine(
   })
 );
 
-// Console format with colors
-const consoleFormat = winston.format.combine(
-  winston.format.colorize(),
-  winston.format.timestamp(),
-  winston.format.printf(({ level, message, context, timestamp, error, stack, ...meta }) => {
-    let log = `${timestamp} [${level}] ${context || 'App'}: ${message}`;
-    if (error?.message) {
-      log += `\nError: ${error.message}`;
-    }
-    if (stack) {
-      log += `\nStack: ${stack}`;
-    }
-    if (Object.keys(meta).length > 0) {
-      log += `\nMeta: ${JSON.stringify(meta, null, 2)}`;
-    }
-    return log;
-  })
-);
+// Configure transports based on environment
+const getTransports = () => {
+  const transports = [];
 
-// Create log directory if it doesn't exist
-const fs = require('fs');
-const logDir = process.env.LOG_DIR || 'logs';
-if (!fs.existsSync(logDir)) {
-  fs.mkdirSync(logDir);
-}
+  // Always add console transport
+  transports.push(
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        customFormat
+      )
+    })
+  );
 
-// Create the logger
+  // Add file transports only in development and when not in a read-only filesystem
+  if (process.env.NODE_ENV === 'development' && !process.env.VERCEL) {
+    try {
+      const logsDir = path.join(process.cwd(), 'logs');
+      
+      // Try to create logs directory
+      if (!fs.existsSync(logsDir)) {
+        fs.mkdirSync(logsDir, { recursive: true });
+      }
+
+      // Add rotating file transports
+      transports.push(
+        new winston.transports.DailyRotateFile({
+          filename: path.join(logsDir, 'error-%DATE%.log'),
+          datePattern: 'YYYY-MM-DD',
+          level: 'error',
+          maxFiles: '14d',
+          format: customFormat
+        }),
+        new winston.transports.DailyRotateFile({
+          filename: path.join(logsDir, 'combined-%DATE%.log'),
+          datePattern: 'YYYY-MM-DD',
+          maxFiles: '14d',
+          format: customFormat
+        })
+      );
+    } catch (error) {
+      console.warn('Unable to create log files, falling back to console only logging:', error.message);
+    }
+  }
+
+  return transports;
+};
+
+// Create logger instance
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: customFormat,
-  transports: [
-    // Console transport with colored output
-    new winston.transports.Console({
-      format: consoleFormat
-    }),
-
-    // File transport for all logs
-    new winston.transports.DailyRotateFile({
-      filename: path.join(logDir, 'combined-%DATE%.log'),
-      datePattern: 'YYYY-MM-DD',
-      maxSize: '20m',
-      maxFiles: '14d'
-    }),
-
-    // Separate file for error logs
-    new winston.transports.DailyRotateFile({
-      filename: path.join(logDir, 'error-%DATE%.log'),
-      datePattern: 'YYYY-MM-DD',
-      maxSize: '20m',
-      maxFiles: '14d',
-      level: 'error'
-    })
-  ]
+  transports: getTransports()
 });
 
 // Add helper methods for consistent logging
